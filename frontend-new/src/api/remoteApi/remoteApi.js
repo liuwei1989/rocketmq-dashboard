@@ -538,6 +538,16 @@ const remoteApi = {
             return {status: 1, errMsg: `Failed to fetch running info for client ${clientId} in group ${consumerGroup}`};
         }
     },
+    queryTopicFeatures: async () => {
+        try {
+            const response = await remoteApi._fetch(remoteApi.buildUrl("/topic/features.query"));
+            return await response.json();
+        } catch (error) {
+            console.error("Error fetching topic features:", error);
+            return {status: 1, errMsg: "Failed to fetch topic features"};
+        }
+    },
+
     queryTopicList: async () => {
         try {
             const response = await remoteApi._fetch(remoteApi.buildUrl("/topic/list.queryTopicType"));

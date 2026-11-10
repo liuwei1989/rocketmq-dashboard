@@ -95,6 +95,16 @@ public class RMQConfigure {
     @Getter
     private String authMode = "file";
 
+    /**
+     * Whether the console surfaces topics whose message type is {@code MIXED}. A broker only reports
+     * that type when it runs with {@code enableMixedMessageType=true}, so deployments on older
+     * clusters keep the historical behaviour of treating an unrecognised {@code MIXED} value as
+     * {@code NORMAL}. Disabled by default.
+     */
+    @Setter
+    @Getter
+    private boolean mixedTypeEnabled = false;
+
     public void setProxyAddrs(List<String> proxyAddrs) {
         this.proxyAddrs = proxyAddrs;
         if (CollectionUtils.isNotEmpty(proxyAddrs)) {

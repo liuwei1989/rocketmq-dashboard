@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import jakarta.annotation.Resource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.dashboard.config.RMQConfigure;
 import org.apache.rocketmq.dashboard.model.request.SendTopicMessageRequest;
 import org.apache.rocketmq.dashboard.model.request.TopicConfigInfo;
 import org.apache.rocketmq.dashboard.permisssion.Permission;
@@ -36,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Collections;
+
 @Controller
 @RequestMapping("/topic")
 @Permission
@@ -47,6 +50,9 @@ public class TopicController {
 
     @Resource
     private ConsumerService consumerService;
+
+    @Resource
+    private RMQConfigure rmqConfigure;
 
     @RequestMapping(value = "/list.query", method = RequestMethod.GET)
     @ResponseBody
@@ -60,6 +66,12 @@ public class TopicController {
     @ResponseBody
     public Object listTopicType() {
         return topicService.examineAllTopicType();
+    }
+
+    @RequestMapping(value = "/features.query", method = RequestMethod.GET)
+    @ResponseBody
+    public Object features() {
+        return Collections.singletonMap("mixedTypeEnabled", rmqConfigure.isMixedTypeEnabled());
     }
 
     @RequestMapping(value = "/stats.query", method = RequestMethod.GET)

@@ -271,4 +271,20 @@ public class TopicServiceImplTest extends BaseTest {
         // Cannot verify waitSendTraceFinish as it's private
         // verify(topicService).waitSendTraceFinish(mockProducer, true);
     }
+
+    @Test
+    public void testResolveMessageTypeFallsBackToNormalWhenMixedTypeIsDisabled() {
+        when(configure.isMixedTypeEnabled()).thenReturn(false);
+
+        Assert.assertEquals("NORMAL", topicService.resolveMessageType("MIXED"));
+        Assert.assertEquals("FIFO", topicService.resolveMessageType("FIFO"));
+        Assert.assertEquals("UNSPECIFIED", topicService.resolveMessageType("UNSPECIFIED"));
+    }
+
+    @Test
+    public void testResolveMessageTypeKeepsMixedWhenEnabled() {
+        when(configure.isMixedTypeEnabled()).thenReturn(true);
+
+        Assert.assertEquals("MIXED", topicService.resolveMessageType("MIXED"));
+    }
 }

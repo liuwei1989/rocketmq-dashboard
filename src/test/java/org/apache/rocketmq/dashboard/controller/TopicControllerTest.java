@@ -390,6 +390,21 @@ public class TopicControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.data.messageTypeList[2]").value("SYSTEM"));
     }
 
+    @Test
+    public void testFeaturesReflectsTheMixedTypeSwitch() throws Exception {
+        final String url = "/topic/features.query";
+
+        when(configure.isMixedTypeEnabled()).thenReturn(true);
+        mockMvc.perform(MockMvcRequestBuilders.get(url))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mixedTypeEnabled").value(true));
+
+        when(configure.isMixedTypeEnabled()).thenReturn(false);
+        mockMvc.perform(MockMvcRequestBuilders.get(url))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mixedTypeEnabled").value(false));
+    }
+
     @Override
     protected Object getTestController() {
         return topicController;

@@ -64,6 +64,8 @@ rocketmq:
     #   - 'acl':  Use credentials from ACL system (requires 'acl.access.key' and 'acl.secret.key')
     # Default: file
     authMode: file
+    # Only surface the MIXED message type when the brokers run with enableMixedMessageType=true
+    mixedTypeEnabled: ${ROCKETMQ_CONFIG_MIXED_TYPE_ENABLED:false}
     useTLS: false
     proxyAddr: 127.0.0.1:8080
     proxyAddrs:

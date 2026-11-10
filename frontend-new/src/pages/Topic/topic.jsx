@@ -28,6 +28,7 @@ import SkipMessageAccumulateDialog from "../../components/topic/SkipMessageAccum
 import StatsViewDialog from "../../components/topic/StatsViewDialog";
 import RouterViewDialog from "../../components/topic/RouterViewDialog";
 import SendTopicMessageDialog from "../../components/topic/SendTopicMessageDialog";
+import {matchesTopicTypeFilter} from "../../utils/topicType";
 
 
 const DeployHistoryList = () => {
@@ -37,12 +38,15 @@ const DeployHistoryList = () => {
     const [filterDelay, setFilterDelay] = useState(false);
     const [filterFifo, setFilterFifo] = useState(false);
     const [filterTransaction, setFilterTransaction] = useState(false);
+    const [filterMixed, setFilterMixed] = useState(false);
     const [filterUnspecified, setFilterUnspecified] = useState(false);
     const [filterRetry, setFilterRetry] = useState(false);
     const [filterDLQ, setFilterDLQ] = useState(false);
     const [filterSystem, setFilterSystem] = useState(false);
     const [rmqVersion, setRmqVersion] = useState(true);
     const [writeOperationEnabled, setWriteOperationEnabled] = useState(true);
+    // MIXED is only surfaced when the backend opts in, so older clusters keep their behaviour.
+    const [mixedTypeEnabled, setMixedTypeEnabled] = useState(false);
 
     const [allTopicList, setAllTopicList] = useState([]);
     const [allMessageTypeList, setAllMessageTypeList] = useState([]);
@@ -95,10 +99,33 @@ const DeployHistoryList = () => {
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
+        remoteApi.queryTopicFeatures()
+            .then(result => {
+                // The backend wraps every answer as {status, data, errMsg}.
+                const enabled = result && result.data ? result.data.mixedTypeEnabled : undefined;
+                if (!cancelled && typeof enabled === 'boolean') {
+                    setMixedTypeEnabled(enabled);
+                    // MIXED topics are only reported when the switch is on; show them by default so
+                    // enabling the switch does not hide them behind an unchecked filter.
+                    setFilterMixed(enabled);
+                }
+            })
+            .catch(error => {
+                // Keep the default type set when the feature probe is unavailable.
+                console.error("Error fetching topic features:", error);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
         filterList(paginationConf.current);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterStr, filterNormal, filterDelay, filterFifo, filterTransaction,
-        filterUnspecified, filterRetry, filterDLQ, filterSystem, allTopicList]);
+        filterUnspecified, filterRetry, filterDLQ, filterSystem, filterMixed,
+        mixedTypeEnabled, allTopicList]);
 
     useEffect(() => {
         const userPermission = localStorage.getItem('userrole');
@@ -204,19 +231,19 @@ const DeployHistoryList = () => {
         }));
     };
 
-    const filterByType = (topic, type) => {
-        if (filterRetry && type.includes("RETRY")) return true;
-        if (filterDLQ && type.includes("DLQ")) return true;
-        if (filterSystem && type.includes("SYSTEM")) return true;
-        if (rmqVersion && filterUnspecified && type.includes("UNSPECIFIED")) return true;
-        if (filterNormal && type.includes("NORMAL")) return true;
-        if (!rmqVersion && filterNormal && type.includes("UNSPECIFIED")) return true;
-        if (rmqVersion && filterDelay && type.includes("DELAY")) return true;
-        if (rmqVersion && filterFifo && type.includes("FIFO")) return true;
-        if (rmqVersion && filterTransaction && type.includes("TRANSACTION")) return true;
-
-        return false;
-    };
+    const filterByType = (topic, type) => matchesTopicTypeFilter(type, {
+        filterRetry,
+        filterDLQ,
+        filterSystem,
+        filterUnspecified,
+        filterNormal,
+        filterDelay,
+        filterFifo,
+        filterTransaction,
+        filterMixed,
+        mixedTypeEnabled,
+        rmqVersion,
+    });
 
     const handleTableChange = (pagination) => {
         setPaginationConf(pagination);
@@ -577,6 +604,14 @@ const DeployHistoryList = () => {
                                             {t.UNSPECIFIED}
                                         </Checkbox>
                                     </Form.Item>
+                                    {mixedTypeEnabled && (
+                                        <Form.Item>
+                                            <Checkbox checked={filterMixed}
+                                                      onChange={(e) => setFilterMixed(e.target.checked)}>
+                                                {t.MIXED}
+                                            </Checkbox>
+                                        </Form.Item>
+                                    )}
                                 </>
                             )}
                             <Form.Item>
@@ -644,6 +679,7 @@ const DeployHistoryList = () => {
                     initialData={topicModifyData}
                     bIsUpdate={isUpdateMode}
                     writeOperationEnabled={writeOperationEnabled}
+                    mixedTypeEnabled={mixedTypeEnabled}
                     allClusterNameList={allClusterNameList || []}
                     allBrokerNameList={allBrokerNameList || []}
                     onSubmit={postTopicRequest}
