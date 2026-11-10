@@ -59,6 +59,8 @@ jobs:
           CI: ''
         run: mvn -B -ntp -DskipTests -Drat.skip=true package
 
+      - uses: docker/setup-qemu-action@v3
+
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -74,13 +76,15 @@ jobs:
           cp target/rocketmq-dashboard-*.jar target/docker-context/rocketmq-dashboard.jar
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
-          docker build \
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
             -f src/main/docker/Dockerfile.jre17 \
             -t "${IMAGE}:2.1.0-mixed" \
             -t "${IMAGE}:2.1.0-mixed-${SHORT_SHA}" \
+            --push \
             target/docker-context
-          docker push "${IMAGE}:2.1.0-mixed"
-          docker push "${IMAGE}:2.1.0-mixed-${SHORT_SHA}"
 
       - name: Publish the package publicly
         env:
