@@ -27,6 +27,11 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/rocketmq-dashboard
+  # The committed lockfile resolves every package from a China mirror, which times out
+  # from GitHub runners; point npm back at the public registry and retry harder.
+  npm_config_registry: https://registry.npmjs.org
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_maxtimeout: '120000'
 
 jobs:
   publish:
@@ -43,6 +48,9 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+
+      - name: Rewrite the lockfile registry
+        run: sed -i 's|https://registry.npmmirror.com|https://registry.npmjs.org|g' frontend-new/package-lock.json
 
       - name: Build the runnable jar (includes the frontend build)
         run: mvn -B -ntp -DskipTests -Drat.skip=true package
