@@ -86,6 +86,23 @@ jobs:
             --push \
             target/docker-context
 
+      - name: Smoke test the published image
+        run: |
+          set -euo pipefail
+          docker run -d --name dashboard-smoke -p 8082:8082 \
+            -e ROCKETMQ_CONFIG_MIXED_TYPE_ENABLED=true \
+            "${IMAGE}:2.1.0-mixed-${SHORT_SHA}"
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:8082/topic/features.query | grep -q mixedTypeEnabled; then
+              break
+            fi
+            sleep 2
+          done
+          BODY=$(curl -s http://localhost:8082/topic/features.query)
+          echo "features.query -> ${BODY}"
+          docker stop dashboard-smoke
+          echo "${BODY}" | grep -q '"mixedTypeEnabled":true'
+
       - name: Publish the package publicly
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
