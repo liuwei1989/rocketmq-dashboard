@@ -53,6 +53,10 @@ jobs:
         run: sed -i 's|https://registry.npmmirror.com|https://registry.npmjs.org|g' frontend-new/package-lock.json
 
       - name: Build the runnable jar (includes the frontend build)
+        # react-scripts fails on any eslint warning when CI is set, and the 2.1.0 frontend
+        # carries pre-existing warnings, so keep CI falsy for this step only.
+        env:
+          CI: ''
         run: mvn -B -ntp -DskipTests -Drat.skip=true package
 
       - uses: docker/setup-buildx-action@v3
