@@ -15,7 +15,10 @@
  * limitations under the License.
  */
 const appConfig = {
-    apiBaseUrl: 'http://localhost:8082'
+    // dev 下由 react-scripts(3003) 托管页面，API 指向本机 8082 后端；
+    // 生产构建打进 jar 由 Spring Boot 同端口服务，用相对路径即可（
+    // 写死 localhost 会导致从其他机器访问时所有 API 请求打到访问者本机）。
+    apiBaseUrl: process.env.NODE_ENV === 'development' ? 'http://localhost:8082' : ''
 };
 
 let _redirectHandler = null;
