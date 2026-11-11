@@ -26,6 +26,7 @@ const TopicModifyDialog = ({
                                initialData,
                                bIsUpdate,
                                writeOperationEnabled,
+                               mixedTypeEnabled,
                                allClusterNameList,
                                allBrokerNameList,
                                onSubmit,
@@ -51,6 +52,7 @@ const TopicModifyDialog = ({
                     initialData={data}
                     bIsUpdate={bIsUpdate}
                     writeOperationEnabled={writeOperationEnabled}
+                    mixedTypeEnabled={mixedTypeEnabled}
                     allClusterNameList={allClusterNameList}
                     allBrokerNameList={allBrokerNameList}
                     onSubmit={onSubmit}

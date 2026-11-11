@@ -173,9 +173,20 @@ public class TopicServiceImpl extends AbstractCommonService implements TopicServ
         if (StringUtils.isBlank(messageType)) {
             messageType = TopicMessageType.UNSPECIFIED.name();
         }
-        topicType.setMessageType(messageType);
+        topicType.setMessageType(resolveMessageType(messageType));
 
         return topicType;
+    }
+
+    /**
+     * MIXED is opt-in: a broker only reports it with enableMixedMessageType=true, so deployments
+     * that have not enabled the switch keep the historical NORMAL fallback.
+     */
+    String resolveMessageType(String messageType) {
+        if (TopicMessageType.MIXED.name().equals(messageType) && !configure.isMixedTypeEnabled()) {
+            return TopicMessageType.NORMAL.name();
+        }
+        return messageType;
     }
 
     @Override

@@ -18,11 +18,13 @@
 // TopicSingleModifyForm.js
 import React, {useEffect} from "react";
 import {Button, Col, Divider, Form, Input, Row, Select} from "antd";
+import {buildMessageTypeOptions} from "../../utils/topicType";
 
 const TopicSingleModifyForm = ({
                                    initialData,
                                    bIsUpdate,
                                    writeOperationEnabled,
+                                   mixedTypeEnabled,
                                    allClusterNameList,
                                    allBrokerNameList,
                                    onSubmit,
@@ -59,12 +61,7 @@ const TopicSingleModifyForm = ({
             });
     };
 
-    const messageTypeOptions = [
-        {value: 'TRANSACTION', label: 'TRANSACTION'},
-        {value: 'FIFO', label: 'FIFO'},
-        {value: 'DELAY', label: 'DELAY'},
-        {value: 'NORMAL', label: 'NORMAL'},
-    ];
+    const messageTypeOptions = buildMessageTypeOptions(mixedTypeEnabled);
 
     return (
         <div style={{paddingBottom: 24}}>

@@ -1,0 +1,113 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Publishes the 2.1.0 branch (MIXED message type switch) as a public ghcr.io image
+# while the upstream pull request is still under review.
+name: Publish 2.1.0 MIXED image
+
+on:
+  push:
+    branches:
+      - ci/ghcr-2.1.0-mixed
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/rocketmq-dashboard
+  # The committed lockfile resolves every package from a China mirror, which times out
+  # from GitHub runners; point npm back at the public registry and retry harder.
+  npm_config_registry: https://registry.npmjs.org
+  npm_config_fetch_retries: '5'
+  npm_config_fetch_retry_maxtimeout: '120000'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Rewrite the lockfile registry
+        run: sed -i 's|https://registry.npmmirror.com|https://registry.npmjs.org|g' frontend-new/package-lock.json
+
+      - name: Build the runnable jar (includes the frontend build)
+        # react-scripts fails on any eslint warning when CI is set, and the 2.1.0 frontend
+        # carries pre-existing warnings, so keep CI falsy for this step only.
+        env:
+          CI: ''
+        run: mvn -B -ntp -DskipTests -Drat.skip=true package
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        run: |
+          set -euo pipefail
+          mkdir -p target/docker-context
+          cp target/rocketmq-dashboard-*.jar target/docker-context/rocketmq-dashboard.jar
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            -f src/main/docker/Dockerfile.jre17 \
+            -t "${IMAGE}:2.1.0-mixed" \
+            -t "${IMAGE}:2.1.0-mixed-${SHORT_SHA}" \
+            --push \
+            target/docker-context
+
+      - name: Smoke test the published image
+        run: |
+          set -euo pipefail
+          docker run -d --name dashboard-smoke -p 8082:8082 \
+            -e ROCKETMQ_CONFIG_MIXED_TYPE_ENABLED=true \
+            "${IMAGE}:2.1.0-mixed-${SHORT_SHA}"
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:8082/topic/features.query | grep -q mixedTypeEnabled; then
+              break
+            fi
+            sleep 2
+          done
+          BODY=$(curl -s http://localhost:8082/topic/features.query)
+          echo "features.query -> ${BODY}"
+          docker stop dashboard-smoke
+          echo "${BODY}" | grep -q '"mixedTypeEnabled":true'
+
+      - name: Publish the package publicly
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            "/user/packages/container/rocketmq-dashboard" \
+            -f visibility=public || echo "visibility already public or not settable here"
