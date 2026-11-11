@@ -33,6 +33,18 @@ spring:
   application:
     name: rocketmq-dashboard
 
+  security:
+    user:
+      name: rocketmq
+      password: 1234567
+      roles: ADMIN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
 logging:
   config: classpath:logback.xml
 
@@ -41,7 +53,9 @@ rocketmq:
     # if this value is empty,use env value rocketmq.config.namesrvAddr  NAMESRV_ADDR | now, default localhost:9876
     # configure multiple namesrv addresses to manage multiple different clusters
     namesrvAddrs:
-      - 127.0.0.1:9876
+    #    与官方发布的镜像保持一致：留空则回退读取 -Drocketmq.namesrv.addr
+    #    或环境变量 NAMESRV_ADDR；若写死，则会覆盖外部传入的地址。
+#      - 127.0.0.1:9876
     #      - 127.0.0.2:9876
     #      - 10.151.47.32:9876;10.151.47.33:9876;10.151.47.34:9876
     #      - 10.151.47.30:9876
